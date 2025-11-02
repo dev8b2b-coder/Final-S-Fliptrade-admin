@@ -223,6 +223,13 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     checkSession();
   }, []);
 
+  // Save current page to sessionStorage whenever it changes (only for authenticated pages)
+  useEffect(() => {
+    if (isAuthenticated && currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'forgot-password' && currentPage !== 'otp-verification') {
+      sessionStorage.setItem('last_visited_page', currentPage);
+    }
+  }, [currentPage, isAuthenticated]);
+
   // Periodically check if user is still active (every 30 seconds)
   useEffect(() => {
     if (!isAuthenticated || !user) return;
@@ -251,6 +258,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   async function checkSession() {
     try {
+      // Mark that we're checking session to prevent showing login page prematurely
+      sessionStorage.setItem('session_checking', 'true');
+      
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       // If there's an error getting session, clear everything
@@ -282,9 +292,43 @@ export function AdminProvider({ children }: { children: ReactNode }) {
             });
             setIsAuthenticated(true);
             
-            // Navigate to default page first
+            // Try to restore last visited page from sessionStorage, otherwise use default
+            const savedPage = sessionStorage.getItem('last_visited_page');
             const defaultPage = getDefaultPageForUserInternal(userData.user);
-            setCurrentPage(defaultPage);
+            
+            // Validate saved page - must be a valid authenticated page and user must have access
+            let targetPage: AdminPage = defaultPage;
+            
+            if (savedPage && savedPage !== 'login' && savedPage !== 'signup' && savedPage !== 'forgot-password' && savedPage !== 'otp-verification') {
+              // Check if user has permission for saved page
+              const isValidPage = ['dashboard', 'deposits', 'bank-deposits', 'staff-management', 'add-staff', 'activity', 'profile'].includes(savedPage);
+              
+              if (isValidPage) {
+                // Check permissions for specific pages
+                if (savedPage === 'dashboard' && userData.user.permissions?.dashboard?.view) {
+                  targetPage = savedPage as AdminPage;
+                } else if (savedPage === 'deposits' && userData.user.permissions?.deposits?.view) {
+                  targetPage = savedPage as AdminPage;
+                } else if (savedPage === 'bank-deposits' && userData.user.permissions?.bankDeposits?.view) {
+                  targetPage = savedPage as AdminPage;
+                } else if ((savedPage === 'staff-management' || savedPage === 'add-staff') && userData.user.permissions?.staffManagement?.view) {
+                  targetPage = savedPage as AdminPage;
+                } else if (savedPage === 'activity') {
+                  // Activity can be accessed if user has any activity permission
+                  const hasActivityPermission = userData.user.permissions?.dashboard?.activity || 
+                                               userData.user.permissions?.deposits?.activity ||
+                                               userData.user.permissions?.bankDeposits?.activity;
+                  if (hasActivityPermission) {
+                    targetPage = savedPage as AdminPage;
+                  }
+                } else if (savedPage === 'profile') {
+                  // Profile is accessible to all authenticated users
+                  targetPage = savedPage as AdminPage;
+                }
+              }
+            }
+            
+            setCurrentPage(targetPage);
             
             // Load data after page is set (pages will show their own loading states)
             await loadData();
@@ -333,6 +377,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       setCurrentPage('login');
     } finally {
       setIsLoading(false);
+      // Remove session checking flag once done
+      sessionStorage.removeItem('session_checking');
     }
   }
 
@@ -452,6 +498,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     try {
       await supabase.auth.signOut();
       api.clearAuthToken();
+      // Clear saved page and session checking flag
+      sessionStorage.removeItem('last_visited_page');
+      sessionStorage.removeItem('session_checking');
       setUser(null);
       setIsAuthenticated(false);
       setStaff([]);

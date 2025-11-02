@@ -121,24 +121,13 @@ export function LoginPage() {
                   <p className="text-red-600 text-sm font-medium">{error}</p>
                   {(error.includes('Invalid') || error.includes('credentials') || error.includes('password')) && (
                     <div className="mt-2 text-xs text-red-600 space-y-1">
-                      <p>• Make sure you've created an account first</p>
                       <p>• Check if your email and password are correct</p>
                       <p>• Password is case-sensitive</p>
+                      <p>• Contact administrator if you need an account</p>
                     </div>
                   )}
                 </div>
               )}
-
-              <div className="text-center mt-4">
-                <span className="text-gray-600 text-sm">Don't have an account? </span>
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage('signup')}
-                  className="text-[#6a40ec] hover:text-[#5a2fd9] text-sm font-medium"
-                >
-                  Sign Up
-                </button>
-              </div>
 
             </form>
           </CardContent>

@@ -33,6 +33,13 @@ function AppContent() {
     }
   }, []);
 
+  // Redirect signup page to login
+  useEffect(() => {
+    if (!isAuthenticated && currentPage === 'signup') {
+      setCurrentPage('login');
+    }
+  }, [currentPage, isAuthenticated, setCurrentPage]);
+
   // Show fix permissions page if requested
   if (showFixPage) {
     return <FixPermissionsPage />;
@@ -43,8 +50,29 @@ function AppContent() {
     return <PermissionFixPage />;
   }
 
-  // Show central loading spinner during transitions
-  if (isLoading && isAuthenticated) {
+  // Show loading spinner during initial session check or authenticated loading
+  // Don't show login page if we're still checking for existing session
+  if (isLoading) {
+    // Check if there's a saved page (meaning user was previously authenticated)
+    const savedPage = sessionStorage.getItem('last_visited_page');
+    const hasSessionCheck = sessionStorage.getItem('session_checking');
+    
+    // If we're checking session and have saved page, show loading instead of login
+    if (savedPage || hasSessionCheck || isAuthenticated) {
+      return (
+        <div className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#6a40ec]/5 to-[#8b5cf6]/5">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-[#6a40ec]/20 rounded-full"></div>
+              <Loader2 className="w-16 h-16 text-[#6a40ec] animate-spin absolute top-0 left-0" />
+            </div>
+            <p className="text-gray-700 font-medium text-lg">Loading...</p>
+            <p className="text-gray-500 text-sm">Please wait</p>
+          </div>
+        </div>
+      );
+    }
+    // If no saved page, might be first visit, show loading briefly
     return (
       <div className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#6a40ec]/5 to-[#8b5cf6]/5">
         <div className="flex flex-col items-center gap-4">
@@ -52,26 +80,27 @@ function AppContent() {
             <div className="w-16 h-16 border-4 border-[#6a40ec]/20 rounded-full"></div>
             <Loader2 className="w-16 h-16 text-[#6a40ec] animate-spin absolute top-0 left-0" />
           </div>
-          <p className="text-gray-700 font-medium text-lg">Loading Dashboard...</p>
+          <p className="text-gray-700 font-medium text-lg">Checking session...</p>
           <p className="text-gray-500 text-sm">Please wait</p>
         </div>
       </div>
     );
   }
 
-  // Show authentication pages
+  // Show authentication pages only when we're sure user is not authenticated
   if (!isAuthenticated) {
     switch (currentPage) {
       case 'login':
         return <LoginPage />;
-      case 'signup':
-        return <SignupPage />;
       case 'forgot-password':
         return <ForgotPasswordPage onBackToLogin={() => setCurrentPage('login')} />;
       case 'otp-verification':
         return <OTPVerificationPage />;
       case 'change-password':
         return <ChangePasswordPage />;
+      case 'signup':
+        // Signup is disabled - redirect to login (handled by useEffect)
+        return <LoginPage />;
       default:
         return <LoginPage />;
     }
