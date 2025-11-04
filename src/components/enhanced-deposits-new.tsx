@@ -222,12 +222,12 @@ export function EnhancedDepositsNew() {
 
   // Client incentives state
   const [clientIncentives, setClientIncentives] = useState<ClientIncentive[]>([
-    { id: '1', name: '', amount: 0 }
+    { id: '1', name: '', amount: '' }
   ]);
 
   // Expenses state
   const [expenses, setExpenses] = useState<ExpenseItem[]>([
-    { id: '1', type: 'Miscellaneous', amount: 0, description: '' }
+    { id: '1', type: 'Miscellaneous', amount: '', description: '' }
   ]);
 
   const resetForm = () => {
@@ -241,8 +241,8 @@ export function EnhancedDepositsNew() {
       cashWithdraw: '',
       selectedStaff: user?.id || '',
     });
-    setClientIncentives([{ id: '1', name: '', amount: 0 }]);
-    setExpenses([{ id: '1', type: 'Miscellaneous', amount: 0, description: '' }]);
+    setClientIncentives([{ id: '1', name: '', amount: '' }]);
+    setExpenses([{ id: '1', type: 'Miscellaneous', amount: '', description: '' }]);
     setEditingDeposit(null);
   };
 
@@ -250,8 +250,24 @@ export function EnhancedDepositsNew() {
     e.preventDefault();
     
     // Filter valid client incentives and expenses (optional fields)
-    const validClientIncentives = clientIncentives.filter(ci => ci.name.trim() !== '' && ci.amount > 0);
-    const validExpenses = expenses.filter(exp => exp.amount > 0);
+    const validClientIncentives = clientIncentives
+      .filter(ci => {
+        const amount = typeof ci.amount === 'string' ? parseFloat(ci.amount) || 0 : ci.amount;
+        return ci.name.trim() !== '' && amount > 0;
+      })
+      .map(ci => ({
+        ...ci,
+        amount: typeof ci.amount === 'string' ? parseFloat(ci.amount) || 0 : ci.amount
+      }));
+    const validExpenses = expenses
+      .filter(exp => {
+        const amount = typeof exp.amount === 'string' ? parseFloat(exp.amount) || 0 : exp.amount;
+        return amount > 0;
+      })
+      .map(exp => ({
+        ...exp,
+        amount: typeof exp.amount === 'string' ? parseFloat(exp.amount) || 0 : exp.amount
+      }));
     
     // Client Incentives and Company Expenses are now optional - no validation required
 
@@ -315,8 +331,8 @@ export function EnhancedDepositsNew() {
       cashWithdraw: deposit.cashWithdraw.toString(),
       selectedStaff: deposit.submittedBy,
     });
-    setClientIncentives(deposit.clientIncentives.length > 0 ? deposit.clientIncentives : [{ id: '1', name: '', amount: 0 }]);
-    setExpenses(deposit.expenses.length > 0 ? deposit.expenses : [{ id: '1', type: 'Miscellaneous', amount: 0, description: '' }]);
+    setClientIncentives(deposit.clientIncentives.length > 0 ? deposit.clientIncentives : [{ id: '1', name: '', amount: '' }]);
+    setExpenses(deposit.expenses.length > 0 ? deposit.expenses : [{ id: '1', type: 'Miscellaneous', amount: '', description: '' }]);
     setIsSheetOpen(true);
   };
 
@@ -427,9 +443,25 @@ export function EnhancedDepositsNew() {
     }).sort((a, b) => {
       switch (sortBy) {
         case 'date-desc':
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
+          // Sort by date first (newest first), then by createdAt if available (most recent first)
+          const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+          if (dateDiff !== 0) return dateDiff;
+          // If same date, sort by createdAt (most recent first) if available
+          const createdAtA = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 0;
+          const createdAtB = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 0;
+          if (createdAtA !== 0 || createdAtB !== 0) return createdAtB - createdAtA;
+          // If no createdAt, use id as fallback (newer IDs typically come first)
+          return b.id.localeCompare(a.id);
         case 'date-asc':
-          return new Date(a.date).getTime() - new Date(b.date).getTime();
+          // Sort by date first (oldest first), then by createdAt if available (oldest first)
+          const dateDiffAsc = new Date(a.date).getTime() - new Date(b.date).getTime();
+          if (dateDiffAsc !== 0) return dateDiffAsc;
+          // If same date, sort by createdAt (oldest first) if available
+          const createdAtAAsc = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 0;
+          const createdAtBAsc = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 0;
+          if (createdAtAAsc !== 0 || createdAtBAsc !== 0) return createdAtAAsc - createdAtBAsc;
+          // If no createdAt, use id as fallback
+          return a.id.localeCompare(b.id);
         case 'amount-desc':
           return calculateTotalDeposit(b) - calculateTotalDeposit(a);
         case 'amount-asc':
@@ -512,7 +544,7 @@ export function EnhancedDepositsNew() {
   };
 
   const addClientIncentive = () => {
-    setClientIncentives([...clientIncentives, { id: Date.now().toString(), name: '', amount: 0 }]);
+    setClientIncentives([...clientIncentives, { id: Date.now().toString(), name: '', amount: '' }]);
   };
 
   const updateClientIncentive = (id: string, field: keyof ClientIncentive, value: any) => {
@@ -528,7 +560,7 @@ export function EnhancedDepositsNew() {
   };
 
   const addExpense = () => {
-    setExpenses([...expenses, { id: Date.now().toString(), type: 'Miscellaneous', amount: 0, description: '' }]);
+    setExpenses([...expenses, { id: Date.now().toString(), type: 'Miscellaneous', amount: '', description: '' }]);
   };
 
   const updateExpense = (id: string, field: keyof ExpenseItem, value: any) => {
@@ -895,9 +927,15 @@ export function EnhancedDepositsNew() {
                               <UserPlus className="w-4 h-4 text-white" />
                             </div>
                             <span className="font-semibold text-sm">Client Incentives</span>
-                            {clientIncentives.filter(ci => ci.amount > 0).length > 0 && (
+                            {clientIncentives.filter(ci => {
+                              const amount = typeof ci.amount === 'string' ? parseFloat(ci.amount) || 0 : (ci.amount || 0);
+                              return amount > 0;
+                            }).length > 0 && (
                               <span className="text-xs bg-[#6a40ec] text-white px-2 py-0.5 rounded-full">
-                                {clientIncentives.filter(ci => ci.amount > 0).length}
+                                {clientIncentives.filter(ci => {
+                                  const amount = typeof ci.amount === 'string' ? parseFloat(ci.amount) || 0 : (ci.amount || 0);
+                                  return amount > 0;
+                                }).length}
                               </span>
                             )}
                           </div>
@@ -930,8 +968,11 @@ export function EnhancedDepositsNew() {
                                     type="number"
                                     step="0.01"
                                     placeholder="0.00"
-                                    value={incentive.amount}
-                                    onChange={(e) => updateClientIncentive(incentive.id, 'amount', parseFloat(e.target.value) || 0)}
+                                    value={incentive.amount === 0 ? '' : (incentive.amount || '')}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      updateClientIncentive(incentive.id, 'amount', value === '' ? '' : (parseFloat(value) || 0));
+                                    }}
                                     className="h-10"
                                   />
                                 </div>
@@ -950,12 +991,18 @@ export function EnhancedDepositsNew() {
                             ))}
                             
                             {/* Total Incentives Summary */}
-                            {clientIncentives.filter(ci => ci.amount > 0).length > 0 && (
+                            {clientIncentives.filter(ci => {
+                              const amount = typeof ci.amount === 'string' ? parseFloat(ci.amount) || 0 : (ci.amount || 0);
+                              return amount > 0;
+                            }).length > 0 && (
                               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                                 <div className="flex justify-between items-center">
                                   <span className="text-sm font-medium text-blue-900">Total Client Incentives:</span>
                                   <span className="font-semibold text-blue-900">
-                                    ${clientIncentives.reduce((sum, ci) => sum + (ci.amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    ${clientIncentives.reduce((sum, ci) => {
+                                      const amount = typeof ci.amount === 'string' ? parseFloat(ci.amount) || 0 : (ci.amount || 0);
+                                      return sum + amount;
+                                    }, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </span>
                                 </div>
                               </div>
@@ -972,9 +1019,15 @@ export function EnhancedDepositsNew() {
                               <DollarSign className="w-4 h-4 text-white" />
                             </div>
                             <span className="font-semibold text-sm">Company Expenses</span>
-                            {expenses.filter(exp => exp.amount > 0).length > 0 && (
+                            {expenses.filter(exp => {
+                              const amount = typeof exp.amount === 'string' ? parseFloat(exp.amount) || 0 : (exp.amount || 0);
+                              return amount > 0;
+                            }).length > 0 && (
                               <span className="text-xs bg-[#6a40ec] text-white px-2 py-0.5 rounded-full">
-                                {expenses.filter(exp => exp.amount > 0).length}
+                                {expenses.filter(exp => {
+                                  const amount = typeof exp.amount === 'string' ? parseFloat(exp.amount) || 0 : (exp.amount || 0);
+                                  return amount > 0;
+                                }).length}
                               </span>
                             )}
                           </div>
@@ -1015,8 +1068,11 @@ export function EnhancedDepositsNew() {
                                       type="number"
                                       step="0.01"
                                       placeholder="0.00"
-                                      value={expense.amount}
-                                      onChange={(e) => updateExpense(expense.id, 'amount', parseFloat(e.target.value) || 0)}
+                                    value={expense.amount === 0 ? '' : (expense.amount || '')}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      updateExpense(expense.id, 'amount', value === '' ? '' : (parseFloat(value) || 0));
+                                    }}
                                       className="h-10"
                                     />
                                   </div>
@@ -1048,12 +1104,18 @@ export function EnhancedDepositsNew() {
                             ))}
                             
                             {/* Total Expenses Summary */}
-                            {expenses.filter(exp => exp.amount > 0).length > 0 && (
+                            {expenses.filter(exp => {
+                              const amount = typeof exp.amount === 'string' ? parseFloat(exp.amount) || 0 : (exp.amount || 0);
+                              return amount > 0;
+                            }).length > 0 && (
                               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                                 <div className="flex justify-between items-center">
                                   <span className="text-sm font-medium text-red-900">Total Company Expenses:</span>
                                   <span className="font-semibold text-red-900">
-                                    ${expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    ${expenses.reduce((sum, exp) => {
+                                      const amount = typeof exp.amount === 'string' ? parseFloat(exp.amount) || 0 : (exp.amount || 0);
+                                      return sum + amount;
+                                    }, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </span>
                                 </div>
                               </div>
@@ -1064,12 +1126,7 @@ export function EnhancedDepositsNew() {
                     </div>
 
                     {/* Footer */}
-                    <div className="flex items-center justify-between pt-5 mt-5 border-t">
-                      <div className="text-xs text-gray-500 flex items-center gap-1.5">
-                        <span className="text-red-500 font-medium">*</span>
-                        <span>Required fields</span>
-                        <span className="text-gray-400 ml-2">• Client Incentives & Company Expenses are optional</span>
-                      </div>
+                    <div className="flex items-center justify-end pt-5 mt-5 border-t">
                       <div className="flex items-center gap-3">
                         <Button 
                           type="button" 
