@@ -1561,7 +1561,9 @@ export function EnhancedBankDeposits() {
                                     const withdrawAmount = parseFloat(editTransactionForm.withdraw || '0');
                                     const pnlAmount = parseFloat(editTransactionForm.pnl || '0');
                                     
-                                    const newBalance = depositAmount - withdrawAmount + pnlAmount;
+                                    // Calculate balance: Previous Balance + Deposit - Withdraw + P&L
+                                    const previousBalance = getPreviousBalance(editTransactionForm.bankId, editTransactionForm.date);
+                                    const newBalance = previousBalance + depositAmount - withdrawAmount + pnlAmount;
                                     
                                     setEditTransactionForm({ 
                                       ...editTransactionForm, 
@@ -1595,7 +1597,9 @@ export function EnhancedBankDeposits() {
                                     const withdrawAmount = parseFloat(withdrawValue || '0');
                                     const pnlAmount = parseFloat(editTransactionForm.pnl || '0');
                                     
-                                    const newBalance = depositAmount - withdrawAmount + pnlAmount;
+                                    // Calculate balance: Previous Balance + Deposit - Withdraw + P&L
+                                    const previousBalance = getPreviousBalance(editTransactionForm.bankId, editTransactionForm.date);
+                                    const newBalance = previousBalance + depositAmount - withdrawAmount + pnlAmount;
                                     
                                     setEditTransactionForm({ 
                                       ...editTransactionForm, 
@@ -1629,7 +1633,9 @@ export function EnhancedBankDeposits() {
                                     const withdrawAmount = parseFloat(editTransactionForm.withdraw || '0');
                                     const pnlAmount = parseFloat(pnlValue || '0');
                                     
-                                    const newBalance = depositAmount - withdrawAmount + pnlAmount;
+                                    // Calculate balance: Previous Balance + Deposit - Withdraw + P&L
+                                    const previousBalance = getPreviousBalance(editTransactionForm.bankId, editTransactionForm.date);
+                                    const newBalance = previousBalance + depositAmount - withdrawAmount + pnlAmount;
                                     
                                     setEditTransactionForm({ 
                                       ...editTransactionForm, 
@@ -1694,9 +1700,6 @@ export function EnhancedBankDeposits() {
                                   </div>
                                 )}
                               </div>
-                              <p className="text-xs text-gray-500 mt-1.5">
-                                Auto-calculated: Deposit - Withdraw + P&L
-                              </p>
                             </div>
                           </div>
                         </div>
