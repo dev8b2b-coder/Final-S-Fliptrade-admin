@@ -578,21 +578,21 @@ export function EnhancedBankDeposits() {
       });
     }
 
-    // Apply sorting
-    return filtered.sort((a, b) => {
+    // Apply sorting (create a copy to avoid mutation)
+    const sorted = [...filtered].sort((a, b) => {
       switch (sortBy) {
         case 'date-desc':
           return new Date(b.date).getTime() - new Date(a.date).getTime();
         case 'date-asc':
           return new Date(a.date).getTime() - new Date(b.date).getTime();
         case 'deposit-desc':
-          return b.deposit - a.deposit;
+          return (b.deposit || 0) - (a.deposit || 0);
         case 'deposit-asc':
-          return a.deposit - b.deposit;
+          return (a.deposit || 0) - (b.deposit || 0);
         case 'withdraw-desc':
-          return b.withdraw - a.withdraw;
+          return (b.withdraw || 0) - (a.withdraw || 0);
         case 'withdraw-asc':
-          return a.withdraw - b.withdraw;
+          return (a.withdraw || 0) - (b.withdraw || 0);
         case 'remaining-desc':
           return (b.remainingBalance || b.remaining || 0) - (a.remainingBalance || a.remaining || 0);
         case 'remaining-asc':
@@ -609,6 +609,7 @@ export function EnhancedBankDeposits() {
           return 0;
       }
     });
+    return sorted;
   }, [
     bankTransactions, 
     dateFilter,
