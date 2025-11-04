@@ -790,7 +790,7 @@ export function EnhancedBankDeposits() {
               </Popover>
               
               {/* Clear Custom Date Range */}
-              {(customDateRange.from || customDateRange.to) && (
+              {/* {(customDateRange.from || customDateRange.to) && (
                 <Button 
                   variant="ghost" 
                   size="sm"
@@ -799,10 +799,10 @@ export function EnhancedBankDeposits() {
                 >
                   <X className="h-3 w-3" />
                 </Button>
-              )}
+              )} */}
 
               {/* Employee Filter - Only for Admins */}
-              {canViewAllEntries() && (
+              {/* {canViewAllEntries() && (
                 <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="All Employees" />
@@ -816,7 +816,7 @@ export function EnhancedBankDeposits() {
                     ))}
                   </SelectContent>
                 </Select>
-              )}
+              )} */}
 
               {/* Clear All Filters */}
               {hasActiveFilters && (
@@ -2067,6 +2067,24 @@ export function EnhancedBankDeposits() {
                     </TableRow>
                   );
                 })}
+                {paginatedTransactions.length > 0 && (
+                  <TableRow className="bg-gray-50 hover:bg-gray-50 border-t-2 border-gray-300">
+                    <TableCell className="font-bold text-left" colSpan={3}>Total</TableCell> 
+                    <TableCell className="font-semibold text-green-600 text-left">
+                      {formatCurrency(paginatedTransactions.reduce((sum, t) => sum + (t.deposit || 0), 0))}
+                    </TableCell>
+                    <TableCell className="font-semibold text-red-600 text-left">
+                      {formatCurrency(paginatedTransactions.reduce((sum, t) => sum + (t.withdraw || 0), 0))}
+                    </TableCell>
+                    <TableCell className={`font-semibold text-left ${paginatedTransactions.reduce((sum, t) => sum + (t.pnl || 0), 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {paginatedTransactions.reduce((sum, t) => sum + (t.pnl || 0), 0) >= 0 ? '+' : ''}{formatCurrency(paginatedTransactions.reduce((sum, t) => sum + (t.pnl || 0), 0))}
+                    </TableCell>
+                    <TableCell className={`font-semibold text-left ${paginatedTransactions.reduce((sum, t) => sum + t.remaining, 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(paginatedTransactions.reduce((sum, t) => sum + t.remaining, 0))}
+                    </TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
             {paginatedTransactions.length === 0 && (
@@ -2075,33 +2093,6 @@ export function EnhancedBankDeposits() {
               </div>
             )}
           </div>
-
-          {paginatedTransactions.length > 0 && (
-            <div className="border-t-2 border-gray-300 bg-gray-50">
-              <Table>
-                <TableBody>
-                  <TableRow className="bg-gray-50 hover:bg-gray-50">
-                    <TableCell className="font-bold text-left">Total</TableCell>
-                    <TableCell></TableCell>
-                    <TableCell></TableCell>
-                    <TableCell className="font-semibold text-green-600 text-justify text-right">
-                      {formatCurrency(paginatedTransactions.reduce((sum, t) => sum + (t.deposit || 0), 0))}
-                    </TableCell>
-                    <TableCell className="font-semibold text-red-600 text-center">
-                      {formatCurrency(paginatedTransactions.reduce((sum, t) => sum + (t.withdraw || 0), 0))}
-                    </TableCell>
-                    <TableCell className={`font-semibold ${paginatedTransactions.reduce((sum, t) => sum + (t.pnl || 0), 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {paginatedTransactions.reduce((sum, t) => sum + (t.pnl || 0), 0) >= 0 ? '+' : ''}{formatCurrency(paginatedTransactions.reduce((sum, t) => sum + (t.pnl || 0), 0))}
-                    </TableCell>
-                    <TableCell className={`font-semibold ${paginatedTransactions.reduce((sum, t) => sum + t.remaining, 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatCurrency(paginatedTransactions.reduce((sum, t) => sum + t.remaining, 0))}
-                    </TableCell>
-                    <TableCell></TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
-          )}
           
           {filteredTransactions.length > 0 && (
             <TablePagination

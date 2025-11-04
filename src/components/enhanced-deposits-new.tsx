@@ -249,14 +249,11 @@ export function EnhancedDepositsNew() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate that all required fields are filled
+    // Filter valid client incentives and expenses (optional fields)
     const validClientIncentives = clientIncentives.filter(ci => ci.name.trim() !== '' && ci.amount > 0);
     const validExpenses = expenses.filter(exp => exp.amount > 0);
     
-    if (validClientIncentives.length === 0 && validExpenses.length === 0) {
-      toast.error('Please add at least one client incentive or expense item');
-      return;
-    }
+    // Client Incentives and Company Expenses are now optional - no validation required
 
     // Determine who is submitting this entry
     let submittedBy = user?.id || '';
@@ -916,7 +913,7 @@ export function EnhancedDepositsNew() {
                               <div key={incentive.id} className="flex gap-3 items-end p-3 border rounded-lg bg-gray-50">
                                 <div className="flex-1 space-y-1.5">
                                   <Label className="text-xs font-medium text-gray-700">
-                                    Client Name <span className="text-red-500">*</span>
+                                    Client Name
                                   </Label>
                                   <Input
                                     placeholder="Enter client name"
@@ -927,7 +924,7 @@ export function EnhancedDepositsNew() {
                                 </div>
                                 <div className="flex-1 space-y-1.5">
                                   <Label className="text-xs font-medium text-gray-700">
-                                    Incentive Amount ($) <span className="text-red-500">*</span>
+                                    Incentive Amount ($)
                                   </Label>
                                   <Input
                                     type="number"
@@ -994,7 +991,7 @@ export function EnhancedDepositsNew() {
                                 <div className="grid grid-cols-5 gap-3 items-end mb-3">
                                   <div className="col-span-2 space-y-1.5">
                                     <Label className="text-xs font-medium text-gray-700">
-                                      Expense Type <span className="text-red-500">*</span>
+                                      Expense Type
                                     </Label>
                                     <Select 
                                       value={expense.type} 
@@ -1012,7 +1009,7 @@ export function EnhancedDepositsNew() {
                                   </div>
                                   <div className="col-span-2 space-y-1.5">
                                     <Label className="text-xs font-medium text-gray-700">
-                                      Amount ($) <span className="text-red-500">*</span>
+                                      Amount ($)
                                     </Label>
                                     <Input
                                       type="number"
@@ -1071,6 +1068,7 @@ export function EnhancedDepositsNew() {
                       <div className="text-xs text-gray-500 flex items-center gap-1.5">
                         <span className="text-red-500 font-medium">*</span>
                         <span>Required fields</span>
+                        <span className="text-gray-400 ml-2">• Client Incentives & Company Expenses are optional</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <Button 
