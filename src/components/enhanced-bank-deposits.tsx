@@ -442,7 +442,7 @@ export function EnhancedBankDeposits() {
     setIsEditTransactionDialogOpen(true);
   };
 
-  const handleUpdateTransaction = (e: React.FormEvent) => {
+  const handleUpdateTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTransaction) return;
 
@@ -450,6 +450,8 @@ export function EnhancedBankDeposits() {
       toast.error('Please select a bank');
       return;
     }
+
+    setIsSubmittingTransaction(true);
 
     const deposit = parseFloat(editTransactionForm.deposit) || 0;
     const withdraw = parseFloat(editTransactionForm.withdraw) || 0;
@@ -469,8 +471,7 @@ export function EnhancedBankDeposits() {
       submittedByName = selectedStaffMember?.name || '';
     }
 
-    const updatedTransaction: BankTransaction = {
-      ...editingTransaction,
+    const updateData = {
       date: editTransactionForm.date,
       bankId: editTransactionForm.bankId,
       deposit,
@@ -480,18 +481,26 @@ export function EnhancedBankDeposits() {
       remainingBalance: remainingBalance,
       submittedBy,
       submittedByName,
+      amount: deposit, // For compatibility
     };
 
-    setBankTransactions(bankTransactions.map(t => 
-      t.id === editingTransaction.id ? updatedTransaction : t
-    ));
-    
-    const bankName = banks.find(b => b.id === updatedTransaction.bankId)?.name || 'Unknown Bank';
-    addActivityLog('edit_bank_transaction', `Updated bank transaction for ${bankName}`, `Date: ${format(new Date(updatedTransaction.date), 'MMM dd, yyyy')}, Deposit: ${formatCurrency(updatedTransaction.deposit)}`);
-    
-    setIsEditTransactionDialogOpen(false);
-    setEditingTransaction(null);
-    toast.success('Transaction updated successfully');
+    try {
+      await api.updateBankDeposit(editingTransaction.id, updateData);
+      await loadData();
+      
+      const bankName = banks.find(b => b.id === editTransactionForm.bankId)?.name || 'Unknown Bank';
+      addActivityLog('edit_bank_transaction', `Updated bank transaction for ${bankName}`, `Date: ${format(new Date(editTransactionForm.date), 'MMM dd, yyyy')}, Deposit: ${formatCurrency(deposit)}`);
+      
+      setIsEditTransactionDialogOpen(false);
+      setEditingTransaction(null);
+      resetEditTransactionForm();
+      toast.success('Transaction updated successfully');
+    } catch (error: any) {
+      console.error('Update transaction error:', error);
+      toast.error(error.message || 'Failed to update transaction');
+    } finally {
+      setIsSubmittingTransaction(false);
+    }
   };
 
   const resetEditTransactionForm = () => {
@@ -1216,9 +1225,10 @@ export function EnhancedBankDeposits() {
                                     const depositValue = e.target.value;
                                     const depositAmount = parseFloat(depositValue || '0');
                                     const withdrawAmount = parseFloat(transactionForm.withdraw || '0');
+                                    const pnlAmount = parseFloat(transactionForm.pnl || '0');
                                     const previousBalance = getPreviousBalance(transactionForm.bankId, transactionForm.date);
                                     
-                                    const newBalance = previousBalance + depositAmount - withdrawAmount;
+                                    const newBalance = previousBalance + depositAmount - withdrawAmount + pnlAmount;
                                     
                                     setTransactionForm({ 
                                       ...transactionForm, 
@@ -1250,9 +1260,10 @@ export function EnhancedBankDeposits() {
                                     const withdrawValue = e.target.value;
                                     const depositAmount = parseFloat(transactionForm.deposit || '0');
                                     const withdrawAmount = parseFloat(withdrawValue || '0');
+                                    const pnlAmount = parseFloat(transactionForm.pnl || '0');
                                     const previousBalance = getPreviousBalance(transactionForm.bankId, transactionForm.date);
                                     
-                                    const newBalance = previousBalance + depositAmount - withdrawAmount;
+                                    const newBalance = previousBalance + depositAmount - withdrawAmount + pnlAmount;
                                     
                                     setTransactionForm({ 
                                       ...transactionForm, 
@@ -1274,7 +1285,7 @@ export function EnhancedBankDeposits() {
                           <div className="w-8 h-8 rounded-lg bg-[#6a40ec] flex items-center justify-center flex-shrink-0">
                             <ArrowUpDown className="w-4 h-4 text-white" />
                           </div>
-                          <span className="font-semibold text-sm">P&L & Balance</span>
+                          <span className="font-semibold text-sm">P&L & amount</span>
                         </div>
                         
                         <div className="p-4">
@@ -1284,22 +1295,31 @@ export function EnhancedBankDeposits() {
                                 <div className="w-5 h-5 rounded bg-purple-100 flex items-center justify-center flex-shrink-0">
                                   <TrendingUp className="w-3 h-3 text-purple-700" />
                                 </div>
-                                P&L (Optional)
+                                P&L Amount
                               </Label>
                               <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm">$</span>
-                                <Input
-                                  id="pnl"
-                                  type="text"
-                                  placeholder="+150 or -75"
-                                  value={transactionForm.pnl || ''}
-                                  onChange={(e) => {
-                                    const pnlValue = e.target.value;
-                                    setTransactionForm({ 
-                                      ...transactionForm, 
-                                      pnl: pnlValue
-                                    });
-                                  }}
+                              <Input
+                                id="pnl"
+                                type="text"
+                                placeholder="+150.00 or -75.50"
+                                value={transactionForm.pnl || ''}
+                                onChange={(e) => {
+                                  const pnlValue = e.target.value;
+                                  const depositAmount = parseFloat(transactionForm.deposit || '0');
+                                  const withdrawAmount = parseFloat(transactionForm.withdraw || '0');
+                                  const pnlAmount = parseFloat(pnlValue || '0');
+                                  
+                                  // Calculate balance: Previous Balance + Deposit - Withdraw + P&L
+                                  const previousBalance = getPreviousBalance(transactionForm.bankId, transactionForm.date);
+                                  const newBalance = previousBalance + depositAmount - withdrawAmount + pnlAmount;
+                                  
+                                  setTransactionForm({ 
+                                    ...transactionForm, 
+                                    pnl: pnlValue,
+                                    remainingBalance: newBalance.toFixed(2)
+                                  });
+                                }}
                                   className={`pl-8 pr-10 h-10 ${
                                     transactionForm.pnl && !isNaN(parseFloat(transactionForm.pnl)) 
                                       ? parseFloat(transactionForm.pnl) >= 0 
@@ -1357,7 +1377,7 @@ export function EnhancedBankDeposits() {
                           </div>
                           <p className="text-xs text-gray-500 mt-2 flex items-center gap-1.5">
                             <span className="inline-block w-1 h-1 rounded-full bg-gray-400"></span>
-                            Balance = Previous Balance + Deposit - Withdraw
+                            Use + for profit, - for loss
                           </p>
                         </div>
                       </div>
@@ -1697,9 +1717,22 @@ export function EnhancedBankDeposits() {
                         <Button 
                           type="submit" 
                           className="bg-[#6a40ec] hover:bg-[#5a2fd9] h-10 px-6"
+                          disabled={isSubmittingTransaction}
                         >
-                          <Edit2 className="w-4 h-4 mr-2" />
-                          Update Transaction
+                          {isSubmittingTransaction ? (
+                            <>
+                              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Updating...
+                            </>
+                          ) : (
+                            <>
+                              <Edit2 className="w-4 h-4 mr-2" />
+                              Update Transaction
+                            </>
+                          )}
                         </Button>
                       </div>
                     </div>
